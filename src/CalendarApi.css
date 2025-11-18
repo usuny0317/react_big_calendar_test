@@ -108,8 +108,23 @@
   min-height: 28px;
 }
 
+/* "더 보기" 버튼 숨기기 (무한 루프 방지) */
 .rbc-button-link.rbc-show-more {
-  font-size: 10px;
+  display: none !important;
+}
+
+/* 월간 뷰에서 "더 보기" 관련 요소 숨기기 */
+.rbc-month-view .rbc-show-more {
+  display: none !important;
+}
+
+/* 월간 뷰 무한 루프 방지: row limit 측정 방지 */
+.rbc-month-view .rbc-row-segment {
+  pointer-events: none;
+}
+
+.rbc-month-view .rbc-day-bg {
+  pointer-events: auto;
 }
 
 .rbc-time-view .rbc-time-header-gutter {
@@ -158,8 +173,8 @@
   min-height: vw(40);
 }
 
-/* 날짜 헤더 셀 (리소스 헤더 위에 표시되는 날짜) */
-.rbc-time-header-content > .rbc-header {
+/* 날짜 헤더 셀 (리소스 헤더 위에 표시되는 날짜) - 주간 뷰에만 적용 */
+.rbc-time-view:not(.rbc-day-view) .rbc-time-header-content > .rbc-header {
   flex: 1;
   border-right: 1px solid #ddd;
   display: flex;
@@ -169,8 +184,28 @@
   font-size: 12px;
 }
 
-.rbc-time-header-content > .rbc-header:last-child {
+.rbc-time-view:not(.rbc-day-view) .rbc-time-header-content > .rbc-header:last-child {
   border-right: none;
+}
+
+/* 일간 뷰에서 헤더 하위 항목 숨기기 */
+.rbc-day-view .rbc-time-header-content > .rbc-header {
+  display: none !important;
+}
+
+/* 일간 뷰에서 헤더 콘텐츠 자체도 숨기거나 최소화 */
+.rbc-day-view .rbc-time-header-content {
+  display: none !important;
+}
+
+/* 일간 뷰에서 불필요한 행 요소 숨기기 */
+.rbc-day-view .rbc-row {
+  display: none !important;
+}
+
+/* 일간 뷰에서 리소스 행 숨기기 */
+.rbc-day-view .rbc-row.rbc-row-resource {
+  display: none !important;
 }
 
 /* 시간 헤더 구터 (왼쪽 시간 컬럼) */
