@@ -1,0 +1,184 @@
+.calendar-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 기본 이벤트 스타일 */
+.rbc-event {
+  background-color: #3174ad;
+  border-color: #265985;
+  color: #fff;
+  border-radius: 4px;
+}
+
+/* 특별 이벤트 스타일 */
+.rbc-event-special {
+  background-color: #d32f2f !important;
+  border-color: #b71c1c !important;
+}
+
+/* 월간 뷰 이벤트 스타일 */
+.rbc-event-month {
+  padding: 2px 4px;
+  font-size: 12px;
+  min-height: 16px;
+}
+
+/* 주간/일간 뷰 이벤트 스타일 */
+.rbc-event-time {
+  padding: 4px 6px;
+  font-size: 12px;
+  min-height: 20px;
+  border-left: 4px solid;
+}
+
+.rbc-event-time:not(.rbc-event-special) {
+  border-left-color: #265985;
+}
+
+.rbc-event-time.rbc-event-special {
+  border-left-color: #b71c1c;
+}
+
+/* 리소스 컬럼 너비 조정 (일간/주간 뷰) */
+.rbc-time-view .rbc-resource-header {
+  width: 67px !important;
+  min-width: 67px !important;
+  max-width: 67px !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  width: 67px !important;
+  min-width: 67px !important;
+  max-width: 67px !important;
+}
+
+.rbc-time-view .rbc-resource {
+  width: 67px !important;
+  min-width: 67px !important;
+  max-width: 67px !important;
+}
+
+/* 리소스 헤더 텍스트 스타일 - 여러 줄 표시 (시간 뷰에만 적용) */
+.rbc-time-view .rbc-resource-header {
+  font-size: 10px;
+  padding: 2px 1px;
+  text-align: center;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 28px;
+  max-height: 28px;
+  overflow: hidden;
+}
+
+/* 시간 뷰 헤더 스타일만 적용 (월간 뷰 제외) */
+.rbc-time-view .rbc-header {
+  font-size: 10px;
+  padding: 4px 2px;
+  text-align: center;
+  line-height: 1.2;
+  min-height: 28px;
+  max-height: 28px;
+  overflow: hidden;
+  white-space: normal;
+  word-wrap: break-word;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 시간 헤더 스타일 */
+.rbc-time-view .rbc-time-header {
+  min-height: 28px;
+}
+
+.rbc-time-view .rbc-time-header-content {
+  min-height: 28px;
+}
+
+.rbc-button-link.rbc-show-more {
+  font-size: 10px;
+}
+
+.rbc-time-view .rbc-time-header-gutter {
+  max-width: calc(67px * 4);
+}
+
+/* 리소스 행 최대 너비 설정 (시간 뷰에만 적용) */
+.rbc-time-view .rbc-row.rbc-row-resource {
+  max-width: 80vw; /* vw(288) = (288 / 360) * 100 = 80vw */
+}
+
+/* 툴바 표시 (맨 위 칸) */
+.rbc-toolbar {
+  display: flex !important;
+  visibility: visible !important;
+  height: auto !important;
+  min-height: 40px !important;
+  padding: 8px 4px;
+  margin-bottom: 8px;
+}
+
+.rbc-toolbar button {
+  font-size: 12px;
+  padding: 4px 8px;
+  margin: 0 2px;
+}
+
+.rbc-toolbar-label {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 8px;
+}
+
+/* 날짜 헤더 영역 (툴바 아래, 리소스 헤더 위) */
+.rbc-time-header {
+  display: flex !important;
+  visibility: visible !important;
+  border-bottom: 1px solid #ddd;
+  max-width: vw(288) !important;
+}
+
+.rbc-time-header-content {
+  display: flex !important;
+  visibility: visible !important;
+  width: vw(288);
+  min-height: vw(40);
+}
+
+/* 날짜 헤더 셀 (리소스 헤더 위에 표시되는 날짜) */
+.rbc-time-header-content > .rbc-header {
+  flex: 1;
+  border-right: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  font-size: 12px;
+}
+
+.rbc-time-header-content > .rbc-header:last-child {
+  border-right: none;
+}
+
+/* 시간 헤더 구터 (왼쪽 시간 컬럼) */
+.rbc-time-header-gutter {
+  min-width: 60px;
+  border-right: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+}
