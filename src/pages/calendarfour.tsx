@@ -8,13 +8,15 @@ import type {
 } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import "../CalendarApi.css";
+import styled, { createGlobalStyle } from "styled-components";
+import { vw } from "../utils/pxstyle";
 
 const localizer = momentLocalizer(moment);
 
 // 리소스가 있는 이벤트 타입 확장
 interface ResourceEvent extends Event {
   resourceId?: number;
+  groupId?: string;
 }
 
 // 4개의 방(리소스) 정의
@@ -71,6 +73,7 @@ const createEvents = (): ResourceEvent[] => {
     timeSlots.forEach((slot) => {
       // tissueLab이 현재 resource의 resourceId와 일치할 때만 이벤트 생성
       if (slot.tissueLab === resource.resourceId) {
+        const groupId = `${slot.title}-${slot.hour}`;
         const start = new Date(currentDay);
         start.setHours(slot.hour, 0, 0, 0);
 
@@ -82,8 +85,38 @@ const createEvents = (): ResourceEvent[] => {
           end,
           title: `${slot.tissueLab}\n${slot.title}`,
           resourceId: resource.resourceId,
+          groupId,
         });
       }
+    });
+  });
+
+  // 테스트용: 여러 리소스를 동시에 사용하는 이벤트 생성
+  const multiResourceSlots = [
+    {
+      hour: 12,
+      duration: 1,
+      title: "공동 실험",
+      resourceIds: [2, 3],
+    },
+  ];
+
+  multiResourceSlots.forEach((slot) => {
+    const groupId = `${slot.title}-${slot.hour}`;
+    slot.resourceIds.forEach((resourceId) => {
+      const start = new Date(currentDay);
+      start.setHours(slot.hour, 0, 0, 0);
+
+      const end = new Date(start);
+      end.setHours(start.getHours() + slot.duration);
+
+      events.push({
+        start,
+        end,
+        title: `${resourceId}\n${slot.title}`,
+        resourceId,
+        groupId,
+      });
     });
   });
 
@@ -94,6 +127,7 @@ function CalendarFour() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View>("month");
   const [events] = useState<ResourceEvent[]>(createEvents());
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   // 초기 로딩 완료 여부 (무한 루프 방지용)
   const [isInitialized, setIsInitialized] = useState(false);
   const initializationTimeoutRef = useRef<number | null>(null);
@@ -122,6 +156,7 @@ function CalendarFour() {
     (event: ResourceEvent) => {
       const isSpecial = event.title?.toString().includes("특별");
       const isMonthView = currentView === "month";
+      const isSelected = selectedGroupId && event.groupId === selectedGroupId;
 
       // className만 반환하고 CSS로 스타일링
       let className = "";
@@ -133,13 +168,16 @@ function CalendarFour() {
       } else {
         className += " rbc-event-time";
       }
+      if (isSelected) {
+        className += " rbc-event-selected";
+      }
 
       return {
         className: className.trim(),
         // style 객체 제거 (완전히 CSS로 처리)
       };
     },
-    [currentView]
+    [currentView, selectedGroupId]
   );
 
   // 날짜 포맷도 메모이제이션
@@ -170,13 +208,21 @@ function CalendarFour() {
   );
 
   // 이벤트 핸들러 메모이제이션
-  const handleSelectEvent = useCallback((event: ResourceEvent) => {
-    console.log("이벤트 선택:", event);
-  }, []);
+  const handleSelectEvent = useCallback(
+    (event: ResourceEvent) => {
+      setSelectedGroupId(event.groupId ?? null);
+      console.log("이벤트 선택:", event);
+    },
+    [setSelectedGroupId]
+  );
 
-  const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
-    console.log("슬롯 선택:", slotInfo);
-  }, []);
+  const handleSelectSlot = useCallback(
+    (slotInfo: SlotInfo) => {
+      setSelectedGroupId(null);
+      console.log("슬롯 선택:", slotInfo);
+    },
+    [setSelectedGroupId]
+  );
 
   // min/max 시간을 메모이제이션
   const minTime = useMemo(
@@ -203,64 +249,266 @@ function CalendarFour() {
   );
 
   return (
-    <div
-      className="calendar-container"
-      style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Calendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        resourceIdAccessor={isResourceView ? "resourceId" : undefined}
-        resourceTitleAccessor={isResourceView ? "resourceTitle" : undefined}
-        resources={isResourceView ? resources : undefined}
-        style={{
-          height: "100%",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        date={currentDate}
-        view={currentView}
-        onNavigate={(date) => setCurrentDate(date)}
-        onView={(view) => setCurrentView(view)}
-        views={["month", "week", "day"]}
-        defaultView="month"
-        toolbar={true}
-        min={minTime}
-        max={maxTime}
-        // 이벤트 스타일 커스터마이징 (CSS로 처리)
-        eventPropGetter={eventStyleGetter}
-        // 날짜 포맷 커스터마이징
-        formats={formats}
-        messages={messages}
-        // 시간 슬롯 간격 (분 단위) - 1시간 단위로 설정
-        step={60}
-        // 이벤트 클릭 핸들러
-        onSelectEvent={handleSelectEvent}
-        // 슬롯 클릭 핸들러 (새 이벤트 생성 가능)
-        onSelectSlot={handleSelectSlot}
-        selectable
-        // 무한 루프 방지: 초기 로딩 시에만 비활성화
-        popup={!isInitialized ? false : undefined}
-        // 무한 루프 방지: 레이아웃 알고리즘 고정
-        dayLayoutAlgorithm="no-overlap"
-        // 무한 루프 방지: 초기 로딩 시에만 "더 보기" 기능 비활성화
-        onShowMore={!isInitialized ? undefined : undefined}
-        // 무한 루프 방지: 초기 로딩 시에만 월간 뷰 최대 행 수 제한 (measureRowLimit 방지)
-        allDayMaxRows={!isInitialized ? 5 : undefined}
-        // 일간 뷰에서 헤더 제거
-        components={components}
-      />
-    </div>
+    <>
+      <CalendarGlobalStyles />
+      <CalendarWrapper>
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          timeslots={1}
+          endAccessor="end"
+          resourceIdAccessor={isResourceView ? "resourceId" : undefined}
+          resourceTitleAccessor={isResourceView ? "resourceTitle" : undefined}
+          resources={isResourceView ? resources : undefined}
+          style={{
+            height: "100%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          date={currentDate}
+          view={currentView}
+          onNavigate={(date) => setCurrentDate(date)}
+          onView={(view) => setCurrentView(view)}
+          views={["month", "week", "day"]}
+          defaultView="month"
+          toolbar={true}
+          min={minTime}
+          max={maxTime}
+          // 이벤트 스타일 커스터마이징 (CSS로 처리)
+          eventPropGetter={eventStyleGetter}
+          // 날짜 포맷 커스터마이징
+          formats={formats}
+          messages={messages}
+          // 시간 슬롯 간격 (분 단위) - 1시간 단위로 설정
+          step={60}
+          // 이벤트 클릭 핸들러
+          onSelectEvent={handleSelectEvent}
+          // 슬롯 클릭 핸들러 (새 이벤트 생성 가능)
+          onSelectSlot={handleSelectSlot}
+          selectable
+          // 무한 루프 방지: 초기 로딩 시에만 비활성화
+          popup={!isInitialized ? false : undefined}
+          // 무한 루프 방지: 레이아웃 알고리즘 고정
+          dayLayoutAlgorithm="no-overlap"
+          // 무한 루프 방지: 초기 로딩 시에만 "더 보기" 기능 비활성화
+          onShowMore={!isInitialized ? undefined : undefined}
+          // 무한 루프 방지: 초기 로딩 시에만 월간 뷰 최대 행 수 제한 (measureRowLimit 방지)
+          allDayMaxRows={!isInitialized ? 5 : undefined}
+          // 일간 뷰에서 헤더 제거
+          components={components}
+        />
+      </CalendarWrapper>
+    </>
   );
 }
 
 export default CalendarFour;
+
+const CalendarWrapper = styled.div`
+  width: 100%;
+  width: 100vw;
+  margin: 20px;
+  padding: 10px;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+`;
+
+const CalendarGlobalStyles = createGlobalStyle`
+  #root {
+    width: 100vw;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  /* 기본 이벤트 */
+  .rbc-event {
+    background-color: #ffff;
+    border-color: #9e9e9e;
+    color: #141414;
+    border-radius: 4px;
+  }
+
+  /* 특별 이벤트 */
+  .rbc-event-special {
+    background-color: #ffff !important;
+    border-color: #c92016 !important;
+    color: #141414;
+  }
+
+  .rbc-event-month {
+    padding: ${vw(2)} ${vw(4)};   
+    font-size: ${vw(12)};
+    min-height: ${vw(16)};
+  }
+
+  .rbc-event-time {
+    padding: ${vw(4)} ${vw(6)};
+    font-size: ${vw(12)};
+    min-height: ${vw(20)};
+    border-left: ${vw(4)} solid;
+  }
+
+  .rbc-event-time:not(.rbc-event-special) {
+    border-left-color: #9e9e9e;
+    border-left-width: ${vw(12)};
+  }
+
+  .rbc-event-time.rbc-event-special {
+    border-left-color: #c92016;
+    border-left-width: ${vw(12)};
+  }
+
+  .rbc-event-selected {
+    box-shadow: 0 0 0 ${vw(2)} #1976d2 inset;
+  }
+
+  .rbc-time-view .rbc-time-view-resources,
+  .rbc-time-view .rbc-resource-header,
+  .rbc-time-view .rbc-day-slot,
+  .rbc-time-view .rbc-resource {
+    min-width: ${vw(67)} !important;
+  }
+
+  .rbc-time-view .rbc-resource-header {
+    font-size: 10px;
+    padding: ${vw(2)} ${vw(1)};
+    text-align: center;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-height: ${vw(28)};
+    max-height: ${vw(28)};
+    overflow: hidden;
+  }
+
+  .rbc-time-view .rbc-header {
+    font-size: ${vw(10)};
+    padding: ${vw(4)} ${vw(2)};
+    text-align: center;
+    line-height: 1.2;
+    min-height: ${vw(28)};
+    max-height: ${vw(28)};
+    overflow: hidden;
+    white-space: normal;
+    word-wrap: break-word;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rbc-time-view .rbc-time-header {
+    min-height: ${vw(28)};
+  }
+
+  .rbc-time-view .rbc-time-header-content {
+    min-height: ${vw(28)};
+  }
+
+  .rbc-button-link.rbc-show-more,
+  .rbc-month-view .rbc-show-more {
+    display: none !important;
+  }
+
+  .rbc-month-view .rbc-row-segment {
+    pointer-events: none;
+  }
+
+  .rbc-month-view .rbc-day-bg {
+    pointer-events: auto;
+  }
+
+  .rbc-time-view .rbc-time-header-gutter {
+    max-width: calc(${vw(67)} * 4);
+  }
+
+  .rbc-time-view .rbc-row.rbc-row-resource {
+    max-width: ${vw(320)} !important;
+  }
+
+  .rbc-toolbar {
+    display: flex !important;
+    visibility: visible !important;
+    height: auto !important;
+    min-height: ${vw(40)} !important;
+    padding: ${vw(8)} ${vw(4)};
+    margin-bottom: 8px;
+  }
+
+  .rbc-toolbar button {
+    font-size: ${vw(10)};
+    padding: ${vw(4)} ${vw(8)};
+    margin: 0 2px;
+  }
+
+  .rbc-toolbar-label {
+    font-size: ${vw(12)};
+    font-weight: 500;
+    padding: 0 ${vw(8)};
+  }
+
+  .rbc-time-header {
+    display: flex !important;
+    visibility: visible !important;
+    border-bottom: 1px solid #ddd;
+    max-width: ${vw(320)} !important;
+  }
+
+  .rbc-time-header-content {
+    display: flex !important;
+    visibility: visible !important;
+    width: ${vw(288)};
+    min-height: ${vw(40)};
+  }
+
+  .rbc-time-view:not(.rbc-day-view) .rbc-time-header-content > .rbc-header {
+    flex: 1;
+    border-right: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: ${vw(8)} ${vw(4)};
+    font-size: 12px;
+  }
+
+  .rbc-time-view:not(.rbc-day-view) .rbc-time-header-content > .rbc-header:last-child {
+    border-right: none;
+  }
+
+  .rbc-day-view .rbc-time-header-content > .rbc-header,
+  .rbc-day-view .rbc-time-header-content,
+  .rbc-day-view .rbc-row,
+  .rbc-day-view .rbc-row.rbc-row-resource {
+    display: none !important;
+  }
+
+  .rbc-time-header-gutter {
+    min-width: ${vw(60)};
+    border-right: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: ${vw(8)} ${vw(4)};
+  }
+
+  .rbc-timeslot-group {
+    width: ${vw(60)} !important;
+    position: relative;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: 0 auto;
+    padding: 0 ${vw(4)};
+    box-sizing: border-box;
+  }
+`;
+
