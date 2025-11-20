@@ -1,15 +1,20 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import type { ComponentType } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import type {
   View,
   Event,
   EventPropGetter,
   SlotInfo,
+  NavigateAction,
 } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import styled, { createGlobalStyle } from "styled-components";
 import { vw } from "../utils/pxstyle";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - react-big-calendar가 TimeGrid 타입을 제공하지 않음
+import TimeGridModule from "react-big-calendar/lib/TimeGrid";
 
 const localizer = momentLocalizer(moment);
 
@@ -26,6 +31,60 @@ const resources = [
   { resourceId: 3, resourceTitle: "Tissue Lab 2" },
   { resourceId: 4, resourceTitle: "Tissue Lab 3" },
 ];
+
+const THREE_DAY_RANGE = 3;
+
+type TimeGridProps = Record<string, unknown>;
+
+const TimeGrid =
+  ((TimeGridModule as { default?: ComponentType<TimeGridProps> }).default ??
+    (TimeGridModule as ComponentType<TimeGridProps>));
+
+const getThreeDayRange = (date: Date) => {
+  const start = localizer.startOf(date, "day");
+  return Array.from({ length: THREE_DAY_RANGE }, (_, index) =>
+    localizer.add(start, index, "day")
+  );
+};
+
+type ThreeDayComponent = ComponentType<TimeGridProps> & {
+  range: (date: Date) => Date[];
+  navigate: (date: Date, action: NavigateAction) => Date;
+  title: (date: Date) => string;
+};
+
+const ThreeDayView: ThreeDayComponent = (
+  props: TimeGridProps & { date?: Date }
+) => {
+  const { date, ...restProps } = props;
+  const range = getThreeDayRange(date ?? new Date());
+  return <TimeGrid {...restProps} range={range} eventOffset={15} />;
+};
+
+ThreeDayView.range = (date: Date) => getThreeDayRange(date);
+
+ThreeDayView.navigate = (date: Date, action: NavigateAction) => {
+  switch (action) {
+    case "PREV":
+      return localizer.add(date, -THREE_DAY_RANGE, "day");
+    case "NEXT":
+      return localizer.add(date, THREE_DAY_RANGE, "day");
+    case "TODAY":
+      return new Date();
+    case "DATE":
+    default:
+      return date;
+  }
+};
+
+ThreeDayView.title = (date: Date) => {
+  const range = getThreeDayRange(date);
+  const start = range[0];
+  const end = range[range.length - 1];
+  return `${moment(start).format("YYYY년 M월 D일")} - ${moment(
+    end
+  ).format("YYYY년 M월 D일")}`;
+};
 
 // 일정 리스트 생성 함수
 const createEvents = (): ResourceEvent[] => {
@@ -73,7 +132,7 @@ const createEvents = (): ResourceEvent[] => {
     timeSlots.forEach((slot) => {
       // tissueLab이 현재 resource의 resourceId와 일치할 때만 이벤트 생성
       if (slot.tissueLab === resource.resourceId) {
-        const groupId = `${slot.title}-${slot.hour}`;
+        // 일반 이벤트는 그룹으로 묶지 않음 (groupId 없음)
         const start = new Date(currentDay);
         start.setHours(slot.hour, 0, 0, 0);
 
@@ -85,7 +144,7 @@ const createEvents = (): ResourceEvent[] => {
           end,
           title: `${slot.tissueLab}\n${slot.title}`,
           resourceId: resource.resourceId,
-          groupId,
+          // groupId 없음 - 일반 이벤트는 그룹으로 묶이지 않음
         });
       }
     });
@@ -125,7 +184,7 @@ const createEvents = (): ResourceEvent[] => {
 
 function CalendarFour() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<View>("month");
+  const [currentView, setCurrentView] = useState<View>("week");
   const [events] = useState<ResourceEvent[]>(createEvents());
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   // 초기 로딩 완료 여부 (무한 루프 방지용)
@@ -146,8 +205,9 @@ function CalendarFour() {
     };
   }, []);
 
-  // day/week 뷰에서만 resource 사용
-  const isResourceView = currentView === "day" || currentView === "week";
+  // day 뷰에서만 resource 사용
+  const isResourceView = currentView === "day";
+  const isTimeGridView = currentView === "day" || currentView === "week";
 
   // 뷰별로 다른 이벤트 스타일 커스터마이징
   // className만 반환하여 CSS로 스타일링 (무한 루프 방지)
@@ -208,13 +268,16 @@ function CalendarFour() {
   );
 
   // 이벤트 핸들러 메모이제이션
-  const handleSelectEvent = useCallback(
-    (event: ResourceEvent) => {
-      setSelectedGroupId(event.groupId ?? null);
-      console.log("이벤트 선택:", event);
-    },
-    [setSelectedGroupId]
-  );
+  const handleSelectEvent = useCallback((event: ResourceEvent) => {
+    // groupId가 있는 경우에만 그룹 선택 (다중 리소스 이벤트)
+    if (event.groupId) {
+      setSelectedGroupId(event.groupId);
+    } else {
+      // 일반 이벤트는 그룹 선택하지 않음
+      setSelectedGroupId(null);
+    }
+    console.log("이벤트 선택:", event);
+  }, []);
 
   const handleSelectSlot = useCallback(
     (slotInfo: SlotInfo) => {
@@ -226,12 +289,12 @@ function CalendarFour() {
 
   // min/max 시간을 메모이제이션
   const minTime = useMemo(
-    () => (isResourceView ? new Date(2025, 0, 1, 10, 0, 0) : undefined),
-    [isResourceView]
+    () => (isTimeGridView ? new Date(2025, 0, 1, 10, 0, 0) : undefined),
+    [isTimeGridView]
   );
   const maxTime = useMemo(
-    () => (isResourceView ? new Date(2025, 0, 1, 22, 0, 0) : undefined),
-    [isResourceView]
+    () => (isTimeGridView ? new Date(2025, 0, 1, 22, 0, 0) : undefined),
+    [isTimeGridView]
   );
 
   // 일간 뷰에서 헤더 제거를 위한 빈 컴포넌트
@@ -246,6 +309,15 @@ function CalendarFour() {
       header: currentView === "day" ? EmptyHeader : undefined,
     }),
     [currentView]
+  );
+
+  const views = useMemo(
+    () => ({
+      month: true,
+      week: ThreeDayView,
+      day: true,
+    }),
+    []
   );
 
   return (
@@ -271,8 +343,8 @@ function CalendarFour() {
           view={currentView}
           onNavigate={(date) => setCurrentDate(date)}
           onView={(view) => setCurrentView(view)}
-          views={["month", "week", "day"]}
-          defaultView="month"
+          views={views}
+          defaultView="week"
           toolbar={true}
           min={minTime}
           max={maxTime}
@@ -427,11 +499,11 @@ const CalendarGlobalStyles = createGlobalStyle`
   }
 
   .rbc-time-view .rbc-time-header-gutter {
-    max-width: calc(${vw(67)} * 4);
+    max-width: auto;
   }
 
   .rbc-time-view .rbc-row.rbc-row-resource {
-    max-width: ${vw(320)} !important;
+    max-width:auto;
   }
 
   .rbc-toolbar {
@@ -459,7 +531,6 @@ const CalendarGlobalStyles = createGlobalStyle`
     display: flex !important;
     visibility: visible !important;
     border-bottom: 1px solid #ddd;
-    max-width: ${vw(320)} !important;
   }
 
   .rbc-time-header-content {
@@ -510,5 +581,14 @@ const CalendarGlobalStyles = createGlobalStyle`
     padding: 0 ${vw(4)};
     box-sizing: border-box;
   }
+
+  /* 헤더의 2개로 나뉘던 영역 보이지 않기 */
+  .rbc-allday-cell{
+  display: none;
+  }
+
+  .rbc-time-content{
+    border: none;
+}
 `;
 
