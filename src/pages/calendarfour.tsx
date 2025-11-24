@@ -125,6 +125,20 @@ const createEvents = (): ResourceEvent[] => {
       user: "홍길동",
       tissueLab: 4, // Lecture room에 표시
     },
+    {
+      hour: 10,
+      duration: 2,
+      title: "특별 강의",
+      user: "홍길동",
+      tissueLab: 2, // Lecture room에 표시
+    },
+    {
+      hour: 10,
+      duration: 2,
+      title: "특별 강의",
+      user: "홍길동",
+      tissueLab: 3, // Lecture room에 표시
+    },
   ];
 
   // 각 resource에 대해 일정 추가
@@ -380,10 +394,7 @@ export default CalendarFour;
 
 const CalendarWrapper = styled.div`
   width: 100%;
-  width: 100vw;
-  margin: 20px;
-  padding: 10px;
-  height: 100vh;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -392,7 +403,6 @@ const CalendarWrapper = styled.div`
 
 const CalendarGlobalStyles = createGlobalStyle`
   #root {
-    width: 100vw;
     min-height: 100vh;
     overflow: auto;
   }
@@ -417,9 +427,9 @@ const CalendarGlobalStyles = createGlobalStyle`
     font-size: ${vw(12)};
     min-height: ${vw(16)};
   }
-
+  
   .rbc-event-time {
-    padding: ${vw(4)} ${vw(6)};
+    padding: ${vw(4)} ${vw(4)};
     font-size: ${vw(12)};
     min-height: ${vw(20)};
     border-left: ${vw(4)} solid;
@@ -536,7 +546,7 @@ const CalendarGlobalStyles = createGlobalStyle`
   .rbc-time-header-content {
     display: flex !important;
     visibility: visible !important;
-    width: ${vw(288)};
+    width: ${vw(20)};
     min-height: ${vw(40)};
   }
 
@@ -562,12 +572,16 @@ const CalendarGlobalStyles = createGlobalStyle`
   }
 
   .rbc-time-header-gutter {
-    min-width: ${vw(60)};
+    min-width: ${vw(10)};
     border-right: 1px solid #ddd;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: ${vw(8)} ${vw(4)};
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: #fff;
   }
 
   .rbc-timeslot-group {
@@ -577,9 +591,21 @@ const CalendarGlobalStyles = createGlobalStyle`
     right: 0;
     top: 0;
     bottom: 0;
-    margin: 0 auto;
+    margin: 0;
     padding: 0 ${vw(4)};
     box-sizing: border-box;
+  }
+
+  /* 시간 축 고정 (주간/일간 뷰) */
+  .rbc-time-view .rbc-time-gutter {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: #fff;
+  }
+
+  .rbc-time-view .rbc-time-gutter .rbc-time-column {
+    position: relative;
   }
 
   /* 헤더의 2개로 나뉘던 영역 보이지 않기 */
@@ -589,6 +615,12 @@ const CalendarGlobalStyles = createGlobalStyle`
 
   .rbc-time-content{
     border: none;
-}
+ }  
+
+ .rbc-day-slot .rbc-events-container{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+ }
 `;
 
