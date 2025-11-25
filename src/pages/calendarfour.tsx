@@ -72,7 +72,7 @@ ThreeDayView.navigate = (date: Date, action: NavigateAction) => {
     case "TODAY":
       return new Date();
     case "DATE":
-    default:
+    default: 
       return date;
   }
 };
@@ -96,6 +96,7 @@ const createEvents = (): ResourceEvent[] => {
   currentDay.setHours(0, 0, 0, 0);
 
   // 모든 시간대 일정 정의 (tissueLab으로 지정된 resource에만 표시)
+  // 테스트 일정
   const timeSlots = [
     {
       hour: 10,
