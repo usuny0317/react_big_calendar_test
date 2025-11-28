@@ -517,6 +517,17 @@ const CalendarGlobalStyles = createGlobalStyle`
     max-width:auto;
   }
 
+  .rbc-time-view .rbc-day-slot,
+  .rbc-time-view .rbc-day-slot .rbc-time-slot,
+  .rbc-time-view .rbc-timeslot-group,
+  .rbc-time-view .rbc-day-bg {
+    
+  }
+
+  .rbc-time-view .rbc-today {
+    background: #FDF2F1 !important;
+  }
+
   .rbc-toolbar {
     display: flex !important;
     visibility: visible !important;
